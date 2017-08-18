@@ -1,6 +1,8 @@
 # mp3-concat
 simple python script for combining splitted mp3 files, tracked by console messages
 
+![Screenshot](/../screenshots/printscreen.png "running example of mp3 combine")
+
 ### requirements
 * pydub
 
