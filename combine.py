@@ -1,6 +1,7 @@
 from glob import glob
 import os
 import sys
+import ntpath
 from pydub import AudioSegment
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -61,31 +62,35 @@ def combine(input_dir_name = 'splitted', output_dir_name = 'combined'):
     if not len(input_dirs):
         printc(IS_EMPTY, RED)
     for _dir in input_dirs:
-        id3 = process_dirname_to_id3(_dir)
-        printc(input_dir_name + '/' + _dir, YELLOW)
-
-        playlist = AudioSegment.silent(duration=500)
-        i = 0
-
-        # read the mp3 from the subdirectory
-        for mp3_file in sorted(glob("{}/*.mp3".format(_dir))):
-            song = AudioSegment.from_mp3(mp3_file)
-            i += 1
-            playlist = playlist.append(song)
-            printc("   {} > {}".format(mp3_file, duration(song)), BLACK)
-
-        # output/artist - title[ - comment].mp3
-        if id3['comment']:
-            output = "{}/{} - {} ({}).mp3".format(output_dir_name, id3['artist'], id3['title'], id3['comment'])
+        if not os.path.isdir(_dir):
+            printc(IS_EMPTY, RED)
+            break
         else:
-            output = "{}/{} - {}.mp3".format(output_dir_name, id3['artist'], id3['title'])
+            id3 = process_dirname_to_id3(_dir)
+            printc(_dir+'/*.*', YELLOW)
 
-        # combine / output the current subdir files
-        printc(output, GREEN)
-        out_f = open(output, 'wb')
-        playlist.export(out_f, format='mp3', tags=id3)
+            playlist = AudioSegment.silent(duration=500)
+            i = 0
 
-        # tell user the status
-        printc('OK\n', GREEN)
+            # read the mp3 from the subdirectory
+            for mp3_file in sorted(glob("{}/*.mp3".format(_dir))):
+                song = AudioSegment.from_mp3(mp3_file)
+                i += 1
+                playlist = playlist.append(song)
+                printc("   {} > {}".format(ntpath.basename(mp3_file), duration(song)), BLACK)
+
+            # output/artist - title[ - comment].mp3
+            if id3['comment']:
+                output = "{}/{} - {} ({}).mp3".format(output_dir_name, id3['artist'], id3['title'], id3['comment'])
+            else:
+                output = "{}/{} - {}.mp3".format(output_dir_name, id3['artist'], id3['title'])
+
+            # combine / output the current subdir files
+            printc(output, GREEN)
+            out_f = open(output, 'wb')
+            playlist.export(out_f, format='mp3', tags=id3)
+
+            # tell user the status
+            printc('OK\n', GREEN)
 
 combine()
