@@ -5,6 +5,8 @@ from pydub import AudioSegment
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 
+IS_EMPTY = 'input directory empty create sub directories with mp3s inside'
+
 
 #following from Python cookbook, #475186
 def has_colours(stream):
@@ -23,12 +25,12 @@ has_colours = has_colours(sys.stdout)
 
 def printc(text, colour=WHITE):
     if has_colours:
-            seq = "\x1b[1;%dm" % (30+colour) + text + "\x1b[0m" + "\n"
+            seq = "\x1b[1;%dm" % (30+colour) + text + "\x1b[0m" + '\n'
             sys.stdout.write(seq)
     else:
             sys.stdout.write(text)
 
-def time(segment):
+def duration(segment):
     secs = len(segment)/1000
     mins = int(secs/60)
     sec = secs-mins*60
@@ -36,49 +38,54 @@ def time(segment):
         sec = '0{}'.format(sec)
     return "{}:{}".format(mins, sec)
 
+def process_dirname_to_id3(_dir):
+    # /artist - title[ - comment]/xxxx-dd.mp3
+    name = _dir.split(os.sep)[1]
+    n = name.split(' - ')
+    artist = n[0]
+    title = n[1]
+    album = 'N21'
+    comment = ''
+    if len(n) > 2:
+        comment = n[2]
 
-def combine():
-    input_dirs = sorted(glob("mp3s/*"))
+    return dict(
+        album=album,
+        artist=artist,
+        title=title,
+        comment=comment
+    )
+
+def combine(input_dir_name = 'splitted', output_dir_name = 'combined'):
+    input_dirs = sorted(glob(input_dir_name + "/*"))
     if not len(input_dirs):
-        printc('mp3s/ directory empty create directories with mp3s there', RED)
+        printc(IS_EMPTY, RED)
     for _dir in input_dirs:
-        # mp3s/artist - title[ - comment]/xxxx-dd.mp3
-        name = _dir.split(os.sep)[1]
-        n = name.split(' - ')
-        artist = n[0]
-        title = n[1]
-        album = 'N21'
-        comment = ''
-        if len(n) > 2:
-            comment = n[2]
-
-        id3 = dict(
-            album=album,
-            artist=artist,
-            title=title,
-            comment=comment
-        )
-
-        printc('mp3s/'+_dir, YELLOW)
+        id3 = process_dirname_to_id3(_dir)
+        printc(input_dir_name + '/' + _dir, YELLOW)
 
         playlist = AudioSegment.silent(duration=500)
-
         i = 0
+
+        # read the mp3 from the subdirectory
         for mp3_file in sorted(glob("{}/*.mp3".format(_dir))):
             song = AudioSegment.from_mp3(mp3_file)
-            cut = song
             i += 1
-            playlist = playlist.append(cut)
-            printc("   {} > {} > {}".format(mp3_file, time(song), time(cut)), BLACK)
-        # output/artist - title[ - comment].mp3
-        if comment:
-            output = "output/{} - {} ({}).mp3".format(artist, title, comment)
-        else:
-            output = "output/{} - {}.mp3".format(artist, title)
+            playlist = playlist.append(song)
+            printc("   {} > {}".format(mp3_file, duration(song)), BLACK)
 
+        # output/artist - title[ - comment].mp3
+        if id3['comment']:
+            output = "{}/{} - {} ({}).mp3".format(output_dir_name, id3['artist'], id3['title'], id3['comment'])
+        else:
+            output = "{}/{} - {}.mp3".format(output_dir_name, id3['artist'], id3['title'])
+
+        # combine / output the current subdir files
+        printc(output, GREEN)
         out_f = open(output, 'wb')
         playlist.export(out_f, format='mp3', tags=id3)
 
-        printc(output, GREEN)
+        # tell user the status
+        printc('OK\n', GREEN)
 
 combine()
