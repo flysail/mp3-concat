@@ -1,5 +1,5 @@
 # mp3-concat
-simple python script for combining splitted mp3 files
+simple python script for combining splitted mp3 files, tracked by console messages
 
 ### requirements
 * pydub
